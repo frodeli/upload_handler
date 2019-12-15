@@ -11,16 +11,12 @@ import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement
 import com.amazonaws.services.simplesystemsmanagement.model.GetParameterRequest;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
 public class UploadHandler implements RequestHandler<S3Event, String> {
-
-    private static final String TEXT = "AWS Workshop";
 
     private AmazonS3 s3 = AmazonS3ClientBuilder.defaultClient();
     private AWSSimpleSystemsManagement systemsManagement= AWSSimpleSystemsManagementClientBuilder.defaultClient();
@@ -36,7 +32,7 @@ public class UploadHandler implements RequestHandler<S3Event, String> {
         var metadata = new ObjectMetadata();
         try (var inputStream = update(s3Object.getObjectContent(), metadata)) {
             var paramRequest = new GetParameterRequest();
-            paramRequest.setName("s3.image-in");
+            paramRequest.setName("s3.image-out");
             var result = systemsManagement.getParameter(paramRequest);
             var targetBucket = result.getParameter().getValue();
             s3.putObject(targetBucket, sourceKey, inputStream, metadata);
@@ -53,27 +49,13 @@ public class UploadHandler implements RequestHandler<S3Event, String> {
         if (bufferedImage == null) {
             throw new IllegalArgumentException("Failed to read image.");
         }
-        addText(bufferedImage);
+        // TODO do something with image
         try (ByteArrayOutputStream stream = new ByteArrayOutputStream()) {
             ImageIO.write(bufferedImage, "jpg", stream);
             var bytes = stream.toByteArray();
             metadata.setContentLength(bytes.length);
             return new ByteArrayInputStream(bytes);
         }
-    }
-
-    private static void addText(BufferedImage bufferedImage) {
-        var g = bufferedImage.getGraphics();
-        var currentFont = g.getFont();
-        var newFont = currentFont.deriveFont(currentFont.getSize() * 2.0F);
-        g.setFont(newFont);
-        var x = bufferedImage.getWidth() - g.getFontMetrics().stringWidth(TEXT);
-        var y = bufferedImage.getHeight() - g.getFontMetrics().getAscent();
-        g.setColor(Color.BLACK);
-        g.fillRect(x,y,bufferedImage.getWidth(), bufferedImage.getHeight());
-        g.setColor(Color.WHITE);
-        g.drawString(TEXT, x, bufferedImage.getHeight());
-        g.dispose();
     }
 
 }
